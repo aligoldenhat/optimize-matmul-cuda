@@ -1,0 +1,35 @@
+cmake_minimum_required(VERSION 3.24)
+project(optimize_matmul_cuda LANGUAGES CXX CUDA)
+
+# ---- Options (toggled by presets or -D on the command line) --------------
+option(WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+option(ENABLE_SANITIZERS "Build host code with ASan + UBSan" OFF)
+
+# ---- Global settings -----------------------------------------------------
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 20)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # compile_commands.json for clangd / clang-tidy
+
+# RTX 3050 = sm_86. Override with -DCMAKE_CUDA_ARCHITECTURES=native if needed.
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+  set(CMAKE_CUDA_ARCHITECTURES 86)
+endif()
+
+find_package(CUDAToolkit REQUIRED) # provides CUDA::cudart, CUDA::cublas
+
+include(cmake/CompilerWarnings.cmake)
+include(cmake/Sanitizers.cmake)
+
+# ---- Targets -------------------------------------------------------------
+add_executable(sgemm src/main.cu)
+target_include_directories(sgemm PRIVATE src)
+target_link_libraries(sgemm PRIVATE CUDA::cudart CUDA::cublas)
+
+# -lineinfo: map SASS back to source lines in ncu / compute-sanitizer.
+# Costs nothing at runtime, so it's always on.
+target_compile_options(sgemm PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>)
+
+set_project_warnings(sgemm ${WARNINGS_AS_ERRORS})
+enable_sanitizers(sgemm ${ENABLE_SANITIZERS})

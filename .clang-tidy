@@ -1,0 +1,28 @@
+# Like ruff's `select` / `ignore`: enable check groups, then disable noisy ones.
+# List of checks: https://clang.llvm.org/extra/clang-tidy/checks/list.html
+Checks: >
+  bugprone-*,
+  performance-*,
+  modernize-*,
+  readability-*,
+  cppcoreguidelines-*,
+  -modernize-use-trailing-return-type,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-macro-usage,
+  -bugprone-easily-swappable-parameters
+
+# Disabled above, and why:
+#   trailing-return-type     : style preference (auto f() -> int), not a bug
+#   identifier-length        : M, N, K, A, B, C are the standard names in GEMM
+#   magic-numbers            : tile sizes like 32, 64, 128 are everywhere
+#   pointer-arithmetic,
+#   constant-array-index     : unavoidable in kernels (A[row * K + k])
+#   macro-usage              : CUDA_CHECK(...) must be a macro to report __FILE__/__LINE__
+#   easily-swappable-params  : every GEMM takes (int M, int N, int K, ...)
+
+WarningsAsErrors: ""
+HeaderFilterRegex: "src/.*"

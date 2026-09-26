@@ -1,0 +1,6 @@
+build/
+# clangd index
+.cache/
+# Nsight reports
+*.ncu-rep
+*.nsys-rep
