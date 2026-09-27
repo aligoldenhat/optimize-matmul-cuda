@@ -1,18 +1,44 @@
 # clangd parses .cu files with clang's own CUDA support, not nvcc.
 # compile_commands.json contains nvcc-only flags that clang doesn't know,
 # so strip them and tell clang where CUDA is and which GPU to target.
+# Reference: NVIDIA/cccl's .clangd. All options: https://clangd.llvm.org/config
+
+# Headers (.cuh) have no entry in compile_commands.json, so clangd guesses
+# their flags. Force CUDA mode so __global__, threadIdx, etc. are understood.
+If:
+  PathMatch: .*\.cuh?
+CompileFlags:
+  Add:
+    - -xcuda
+
+---
+
 CompileFlags:
   CompilationDatabase: build/debug
   Remove:
+    # nvcc driver flags
     - -forward-unknown-to-host-compiler
-    - --generate-code*
     - -Xcompiler*
+    - -ccbin*
+    - --options-file
+    # GPU architecture flags (replaced by --cuda-gpu-arch below)
+    - --generate-code*
+    - -gencode*
+    - -arch*
+    # nvcc code-generation / debug flags
     - -lineinfo
+    - -G
+    - -rdc*
+    - --expt-relaxed-constexpr
+    - --expt-extended-lambda
+    - --extended-lambda
+    # nvcc's own warning flags
     - -Wreorder
     - --Wext-lambda-captures-this
     - --Werror*
-    - --options-file
   Add:
     - --cuda-path=/usr/local/cuda
     - --cuda-gpu-arch=sm_86
-    - -Wno-unknown-cuda-version # clang may not know CUDA 13.1 yet
+    - --no-cuda-version-check   # CUDA 13.1 may be newer than clang knows
+    - -Wno-unknown-cuda-version
+    - -ferror-limit=0           # show all errors, not just the first 20

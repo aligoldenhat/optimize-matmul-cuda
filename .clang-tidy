@@ -6,6 +6,12 @@ Checks: >
   modernize-*,
   readability-*,
   cppcoreguidelines-*,
+  clang-analyzer-*,
+  misc-*,
+  portability-*,
+  -misc-non-private-member-variables-in-classes,
+  -misc-use-anonymous-namespace,
+  -misc-use-internal-linkage,
   -modernize-use-trailing-return-type,
   -readability-identifier-length,
   -readability-magic-numbers,
@@ -13,7 +19,14 @@ Checks: >
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -cppcoreguidelines-pro-bounds-constant-array-index,
   -cppcoreguidelines-macro-usage,
-  -bugprone-easily-swappable-parameters
+  -bugprone-easily-swappable-parameters,
+  -readability-math-missing-parentheses,
+  -readability-uppercase-literal-suffix,
+  -modernize-use-integer-sign-comparison,
+  -portability-avoid-pragma-once,
+  -misc-include-cleaner,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
 
 # Disabled above, and why:
 #   trailing-return-type     : style preference (auto f() -> int), not a bug
@@ -23,6 +36,24 @@ Checks: >
 #   constant-array-index     : unavoidable in kernels (A[row * K + k])
 #   macro-usage              : CUDA_CHECK(...) must be a macro to report __FILE__/__LINE__
 #   easily-swappable-params  : every GEMM takes (int M, int N, int K, ...)
+#   misc-non-private-member..: plain structs (e.g. a Timer or Config) are fine
+#   misc-use-anonymous-ns,
+#   misc-use-internal-linkage: want every free function in main.cu marked static
+#                              or in an anonymous namespace; noisy for a single-file
+#                              program (llama.cpp and cccl disable these too)
+#   math-missing-parentheses : wants A[(row * K) + k]; index math is everywhere
+#   uppercase-literal-suffix : wants 1.0F instead of 1.0f
+#   integer-sign-comparison  : suggests std::cmp_less(), which can't be called
+#                              from device code (it's not __device__)
+#   avoid-pragma-once        : #pragma once is supported by every compiler we use
+# (llama.cpp disables the first two; cccl disables integer-sign-comparison)
+#   include-cleaner          : CUDA's runtime API (cudaMalloc, dim3, ...) is
+#                              included implicitly by nvcc, so every call is flagged
+#   pro-type-vararg          : flags printf; fine for a benchmark's output (cccl disables)
+#   unchecked-container-acc. : flags every v[i]; would force .at() everywhere
+#
+# Enabled groups: clang-analyzer = path-sensitive bug finder (null deref, leaks),
+# misc = assorted checks, portability = platform-dependent code.
 
 WarningsAsErrors: ""
 HeaderFilterRegex: "src/.*"

@@ -8,4 +8,6 @@
 //
 // Kernels live in src/kernels/, one file per kernel (1_naive.cuh, ...).
 
-int main() { return 0; }
+int main() {
+    return 0;
+}

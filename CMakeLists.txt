@@ -1,4 +1,12 @@
 cmake_minimum_required(VERSION 3.24)
+
+# RTX 3050 = sm_86. Must be set BEFORE project(): project() fills in nvcc's
+# default (sm_75) if it's unset, and that default would win.
+# Override with -DCMAKE_CUDA_ARCHITECTURES=native if needed.
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+  set(CMAKE_CUDA_ARCHITECTURES 86)
+endif()
+
 project(optimize_matmul_cuda LANGUAGES CXX CUDA)
 
 # ---- Options (toggled by presets or -D on the command line) --------------
@@ -8,14 +16,11 @@ option(ENABLE_SANITIZERS "Build host code with ASan + UBSan" OFF)
 # ---- Global settings -----------------------------------------------------
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF) # -std=c++20, not -std=gnu++20 (no GNU-only extensions)
 set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # compile_commands.json for clangd / clang-tidy
-
-# RTX 3050 = sm_86. Override with -DCMAKE_CUDA_ARCHITECTURES=native if needed.
-if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-  set(CMAKE_CUDA_ARCHITECTURES 86)
-endif()
 
 find_package(CUDAToolkit REQUIRED) # provides CUDA::cudart, CUDA::cublas
 

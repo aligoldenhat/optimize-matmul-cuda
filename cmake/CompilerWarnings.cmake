@@ -19,10 +19,22 @@ function(set_project_warnings target warnings_as_errors)
       -Wformat=2             # printf format string checks
       -Wimplicit-fallthrough # switch case without break
       -Wcast-align
-      -Wunused)
+      -Wunused
+      # gcc-only (from cpp-best-practices/cmake_template):
+      -Wduplicated-branches    # if/else branches with identical code
+      -Wlogical-op)            # && / || where & / | was probably meant
 
-  # Only for pure .cpp files: nvcc's generated host stubs trigger these.
-  set(cxx_only_warnings -Wpedantic -Wold-style-cast -Wnon-virtual-dtor)
+  # Only for pure .cpp files:
+  #  - nvcc's generated host stubs trigger -Wpedantic / -Wold-style-cast.
+  #  - nvcc's front end (cudafe) rewrites code before g++ sees it: it turns
+  #    `else if` into `else { if }` and adds braces / reformats. So in .cu files
+  #    -Wduplicated-cond and -Wmisleading-indentation can never fire (tested).
+  set(cxx_only_warnings
+      -Wpedantic
+      -Wold-style-cast
+      -Wnon-virtual-dtor
+      -Wduplicated-cond        # if (a) ... else if (a) ...
+      -Wmisleading-indentation) # indentation suggests a block that isn't there
 
   # nvcc's own warnings (these do apply to device code).
   set(cuda_warnings -Wreorder --Wext-lambda-captures-this)
