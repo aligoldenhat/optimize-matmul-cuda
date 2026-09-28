@@ -57,3 +57,13 @@ Checks: >
 
 WarningsAsErrors: ""
 HeaderFilterRegex: "src/.*"
+
+CheckOptions:
+  # `do { ... } while (0)` is the standard idiom for multi-statement macros
+  # (CUDA_CHECK). Still warn on real do-while loops, just not inside macros.
+  - key: cppcoreguidelines-avoid-do-while.IgnoreMacros
+    value: true
+  # Each CUDA_CHECK(...) hides a do + if, so 10 checked calls would count
+  # as 10 nested branches. Score only the logic we actually wrote.
+  - key: readability-function-cognitive-complexity.IgnoreMacros
+    value: true
