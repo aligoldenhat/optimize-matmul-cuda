@@ -95,3 +95,26 @@ TFLOPS       = FLOPs / seconds / 1e12
 bytes (min)  = 4·(M·K + K·N + M·N)       # float32, each matrix touched once
 intensity    = FLOPs / bytes
 ```
+
+## Abbreviations from the GPU assembly and profiling docs
+
+Used in [06-inspecting-kernels.md](06-inspecting-kernels.md).
+
+| Short form | Full form | Meaning |
+|---|---|---|
+| **PTX** | Parallel Thread Execution | NVIDIA's portable, human-readable "virtual assembly". The compiler produces it first. |
+| **SASS** | Streaming ASSembler (the commonly used expansion) | The real machine code of the GPU, specific to one architecture (sm_86 here). |
+| **ISA** | Instruction Set Architecture | The list of instructions a processor understands. |
+| **FMA** | Fused Multiply-Add | One instruction doing `a * b + c`. Counts as 2 FLOPs. |
+| **FFMA** | Float Fused Multiply-Add | The SASS instruction for an FMA on 32-bit floats. |
+| **LDG** | LoaD from Global memory | Read from VRAM (slow). |
+| **LDS** | LoaD from Shared memory | Read from shared memory (fast, on-chip). `LDS.128` loads 128 bits = 4 floats at once. |
+| **STS** | STore to Shared memory | Write into shared memory. |
+| **BAR.SYNC** | BARrier SYNChronization | What `__syncthreads()` becomes: every thread in the block waits here. |
+| **MIO** | Memory Input/Output (queue/unit) | The hardware queue that handles shared-memory instructions and some special math. "MIO throttle" = this queue is full, so warps wait. |
+| **SM** | Streaming Multiprocessor | A GPU compute unit. The RTX 3050 Laptop has 16. |
+| **SMEM / GMEM** | Shared MEMory / Global MEMory | See the table above. |
+| **ncu** | Nsight Compute | Profiler that explains *why* one kernel is slow. |
+| **nsys** | Nsight Systems | Profiler that shows a timeline of the whole program. |
+| **cuBLAS** | CUDA Basic Linear Algebra Subroutines | NVIDIA's optimized matrix library. |
+| **ASan / UBSan** | AddressSanitizer / UndefinedBehaviorSanitizer | Compiler checks for memory errors / undefined behavior in CPU code. |

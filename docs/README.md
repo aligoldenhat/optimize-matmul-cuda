@@ -11,6 +11,7 @@ tooling around them.
 | [03-config-files.md](03-config-files.md) | What's inside `.clang-tidy`, `.clang-format`, `.clangd`, `.pre-commit-config.yaml`, compared across cmake_template, cccl, llama.cpp and this repo |
 | [04-reference-repos.md](04-reference-repos.md) | Big repos worth learning from, and which files to read in each |
 | [05-lessons-learned.md](05-lessons-learned.md) | Gotchas found (and verified) while setting up this repo: nvcc vs g++ warnings, arch bug, clang 21 vs 22, ... |
+| [06-inspecting-kernels.md](06-inspecting-kernels.md) | PTX vs SASS, `cuobjdump` / `nvdisasm`, reading `ncu` stall reasons (MIO throttle), Godbolt, tool cheat sheet |
 
 ## How this repo's tooling fits together
 

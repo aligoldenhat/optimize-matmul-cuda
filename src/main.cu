@@ -11,13 +11,17 @@
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
 
+#include <charconv>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <random>
+#include <string_view>
 #include <vector>
+
+#include "kernels/3_shared_mem.cuh"
 
 #define CUDA_CHECK(call)                                                          \
     do {                                                                          \
@@ -79,15 +83,25 @@ bool matrices_match(const std::vector<float>& ref, const std::vector<float>& out
     return true;
 }
 
-int main() {
-    // Non-square on purpose: catches mixed-up M/N/K.
-    const int M = 128;
-    const int N = 256;
-    const int K = 64;
+int main(int argc, char** argv) {
+    // Optional argument: one square size, e.g. `./sgemm 1024` (a multiple of 32).
+    // Without it, use a small NON-square shape: catches mixed-up M/N/K.
+    int size = 0;  // 0 = use the default shape
+    if (argc > 1) {
+        const std::string_view arg(argv[1]);
+        const auto result = std::from_chars(arg.data(), arg.data() + arg.size(), size);
+        if (result.ec != std::errc() || size <= 0) {
+            std::fprintf(stderr, "usage: %s [square size, e.g. 1024]\n", argv[0]);
+            return EXIT_FAILURE;
+        }
+    }
+    const int M = size > 0 ? size : 128;
+    const int N = size > 0 ? size : 256;
+    const int K = size > 0 ? size : 64;
 
-    const size_t size_A = static_cast<size_t>(M) * K;
-    const size_t size_B = static_cast<size_t>(K) * N;
-    const size_t size_C = static_cast<size_t>(M) * N;
+    const size_t size_A = static_cast<size_t>(M) * static_cast<size_t>(K);
+    const size_t size_B = static_cast<size_t>(K) * static_cast<size_t>(N);
+    const size_t size_C = static_cast<size_t>(M) * static_cast<size_t>(N);
 
     std::vector<float> h_A(size_A);
     std::vector<float> h_B(size_B);
@@ -131,6 +145,27 @@ int main() {
     } else {
         printf("cuBLAS does NOT match CPU reference\n");
     }
+
+    // ---- kernel 3: shared-memory blocking ------------------------------------
+    // d_C holds cuBLAS's result now, so give our kernel a fresh copy of the ORIGINAL C.
+    float* d_C_mine = nullptr;
+    CUDA_CHECK(cudaMalloc(&d_C_mine, size_C * sizeof(float)));
+    CUDA_CHECK(cudaMemcpy(d_C_mine, h_C.data(), size_C * sizeof(float), cudaMemcpyHostToDevice));
+
+    run_sgemm_shared_mem_block(M, N, K, alpha, d_A, d_B, beta, d_C_mine);
+    CUDA_CHECK(cudaGetLastError());       // did the launch itself fail?
+    CUDA_CHECK(cudaDeviceSynchronize());  // wait for it; catches errors while running
+
+    std::vector<float> h_C_mine(size_C);
+    CUDA_CHECK(
+        cudaMemcpy(h_C_mine.data(), d_C_mine, size_C * sizeof(float), cudaMemcpyDeviceToHost));
+
+    if (matrices_match(h_C_cublas, h_C_mine, N)) {
+        std::printf("Kernel 3 (shared mem) matches cuBLAS\n");
+    } else {
+        std::printf("Kernel 3 (shared mem) does NOT match cuBLAS\n");
+    }
+    CUDA_CHECK(cudaFree(d_C_mine));
 
     CUBLAS_CHECK(cublasDestroy(handle));
 

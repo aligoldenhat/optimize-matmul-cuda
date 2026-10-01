@@ -32,9 +32,16 @@ add_executable(sgemm src/main.cu)
 target_include_directories(sgemm PRIVATE src)
 target_link_libraries(sgemm PRIVATE CUDA::cudart CUDA::cublas)
 
-# -lineinfo: map SASS back to source lines in ncu / compute-sanitizer.
-# Costs nothing at runtime, so it's always on.
-target_compile_options(sgemm PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>)
+# Non-Debug builds: -lineinfo maps SASS back to source lines in ncu /
+# compute-sanitizer. Costs nothing at runtime, so it's always on there.
+# (Debug builds use -G below, which already includes line info and conflicts
+# with -lineinfo.)
+target_compile_options(sgemm PRIVATE $<$<AND:$<NOT:$<CONFIG:Debug>>,$<COMPILE_LANGUAGE:CUDA>>:-lineinfo>)
+
+# Debug builds: -G keeps device debug info and turns off device optimizations,
+# so cuda-gdb can set breakpoints in kernels and show local variables.
+# Kernels get MUCH slower with -G: never benchmark a Debug build.
+target_compile_options(sgemm PRIVATE $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:CUDA>>:-G>)
 
 set_project_warnings(sgemm ${WARNINGS_AS_ERRORS})
 enable_sanitizers(sgemm ${ENABLE_SANITIZERS})
